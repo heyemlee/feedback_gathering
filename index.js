@@ -1,26 +1,25 @@
 const express = require('express');
+const mongoose = require('mongoose');
+const cookieSession = require('cookie-session');
 const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const keys = require('./config/keys'); 
+const keys = require('./config/keys');
+require('./models/User');
+require('./services/passport');
+
+mongoose.connect(keys.mongoURI);
+
 const app = express();
 
-//Config Google strategy with Passport.
-passport.use(new GoogleStrategy({
-    clientID: keys.googleClientID,
-    clientSecret: keys.googleClientSecret,
-    //The redirected URL after completing the Google login process.
-    callbackURL: '/auth/google/callback'
-}, accessToken => {
-    //Callback function, receive the accessToken returned from Google.
-    console.log(accessToken );
-}));
+app.use(
+  cookieSession({
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    keys: [keys.cookieKey]
+  })
+);
+app.use(passport.initialize());
+app.use(passport.session());
 
-//Create authentication route.  
-app.get('/auth/google', passport.authenticate('google', {
-    scope: ['profile', 'email']
-}));
-
-app.get('/auth/google/callback', passport.authenticate('google'));
+require('./routes/authRoutes')(app);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT);
